@@ -6,7 +6,7 @@ if __name__ == "__main__":
     gtk2reactor.install() # has to be done before importing reactor
 from twisted.internet import reactor
 import clutter
-#import cluttergtk
+import cluttergtk
 import gtk
 #import cluttergst
 
