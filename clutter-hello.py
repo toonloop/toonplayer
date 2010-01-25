@@ -6,9 +6,12 @@ if __name__ == "__main__":
     gtk2reactor.install() # has to be done before importing reactor
 from twisted.internet import reactor
 import clutter
-#import cluttergtk
+try:
+    import cluttergtk
+    have_cluttergtk = True
+except ImportError:
+    have_cluttergtk = False
 import gtk
-#import cluttergst
 
 WIDTH = 640
 HEIGHT = 480
@@ -34,12 +37,15 @@ class Scene(object):
 
         self.stage.show_all()
 
+
 class App(object):
     def __init__(self):
         # GTK window
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
         self.window.set_title("Toon Player")
         self.window.connect("delete-event", self.destroy_app)
+        self.window.connect("key-press-event", self.keypress)
+
         self.window.set_default_size(WIDTH, HEIGHT)
         # Vertical Box
         vbox = gtk.VBox(False)
@@ -53,6 +59,9 @@ class App(object):
         vbox.pack_start(self.embed, True, True)
         self.window.show_all()
 
+        self.is_fullscreen = False
+
+
     def destroy_app(self, widget, data=None):
         """
         Destroy method causes appliaction to exit
@@ -63,12 +72,51 @@ class App(object):
             print("reactor.stop()")
             reactor.stop()
 
+    def keypress(self, object, event):
+        if event.keyval == gtk.keysyms.F11:
+            self.toggle_fullscreen()
+
+    def toggle_fullscreen(self):
+        """
+        Toggle the fullscreen state of the window. When the window is
+        fullscreen, the only widget that is shown is the Embed widget
+        that renders the stage.
+        """
+
+        if not self.is_fullscreen:
+            self.window.fullscreen()
+            self._showhideWidgets(self.embed, True)
+        else:
+            self.window.unfullscreen()
+            self._showhideWidgets(self.embed, False)
+        self.is_fullscreen = not self.is_fullscreen
+
+    def _showhideWidgets(self, widget, hide):
+        """
+        Show or hide all widgets in the window except the given
+        widget. Used for going fullscreen: in fullscreen, you only
+        want the clutter embed widget and the menu bar etc.
+        """
+        parent = widget.get_parent()
+
+        for c in parent.get_children():
+            if c != widget:
+                if hide:
+                    c.hide()
+                else:
+                    c.show()
+        if parent == self.window:
+            return
+        self._showhideWidgets(parent, hide)
+
+
+
 if __name__ == "__main__":
-    #app = App()
-    #gtk.main()
-    #clutter.main()
-    stage = clutter.Stage()
-    scene = Scene(stage)
+    if have_cluttergtk:
+        app = App()
+    else:
+        stage = clutter.Stage()
+        scene = Scene(stage)
     try:
         reactor.run()
     except KeyboardInterrupt:
