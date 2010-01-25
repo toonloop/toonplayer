@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 """
 Testing OpenGL in a GTK Window.
+
+This is quite long to startup, though.
 """
 import sys
 import pygtk
@@ -152,15 +154,20 @@ class SimpleDemo(object):
         print "has stencil buffer:",      glconfig.has_stencil_buffer()
         print "has accumulation buffer:", glconfig.has_accum_buffer()
         # Drawing Area
-        drawing_area = SimpleDrawingArea(glconfig)
-        drawing_area.set_size_request(WIDTH, HEIGHT)
-        vbox.pack_start(drawing_area)
+        self.drawing_area = SimpleDrawingArea(glconfig)
+        self.drawing_area.set_size_request(WIDTH, HEIGHT)
+        vbox.pack_start(self.drawing_area)
 
         # A quit button.
         button = gtk.Button('Quit')
         button.connect('clicked', self.on_quit_clicked)
         vbox.pack_start(button, expand=False)
-        self.window.show_all()
+        
+        self.drawing_area.show()
+        button.show()
+        vbox.show()
+        self.window.show()
+        #self.window.show_all()
 
     def on_delete_event(self, widget, event=None):
         gtk.main_quit()
@@ -177,8 +184,10 @@ class SimpleDemo(object):
     def toggle_fullscreen(self):
         if self.is_fullscreen:
             self.window.unfullscreen()
+            self._showhideWidgets(self.drawing_area, False)
         else:
             self.window.fullscreen()
+            self._showhideWidgets(self.drawing_area, True)
 
     def on_window_state_event(self, widget, event):
         #print 'window state event', event.type, event.changed_mask, 
@@ -192,6 +201,25 @@ class SimpleDemo(object):
                 print('fullscreen off')
             self.is_fullscreen = False
         return True
+    
+    def _showhideWidgets(self, widget, hide=True):
+        """
+        Show or hide all widgets in the window except the given
+        widget. Used for going fullscreen: in fullscreen, you only
+        want the clutter embed widget and the menu bar etc.
+        """
+        parent = widget.get_parent()
+
+        for c in parent.get_children():
+            if c != widget:
+                print "toggle %s visibility %s" % (c, hide)
+                if hide:
+                    c.hide()
+                else:
+                    c.show()
+        if parent == self.window:
+            return
+        self._showhideWidgets(parent, hide)
 
 if __name__ == '__main__':
     app = SimpleDemo()
