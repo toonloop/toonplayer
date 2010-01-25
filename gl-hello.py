@@ -201,11 +201,11 @@ class SimpleApp(object):
     def on_window_state_event(self, widget, event):
         #print 'window state event', event.type, event.changed_mask, 
         #print event.new_window_state
-        if event.new_window_state == gtk.gdk.WINDOW_STATE_FULLSCREEN:
+        if event.new_window_state & gtk.gdk.WINDOW_STATE_FULLSCREEN != 0:
             if self.verbose:
                 print('fullscreen on')
             self.is_fullscreen = True
-        elif event.new_window_state == 0: #gtk.gdk.WINDOW_STATE_WITHDRAWN:
+        else: #elif event.new_window_state == 0: #gtk.gdk.WINDOW_STATE_WITHDRAWN:
             if self.verbose:
                 print('fullscreen off')
             self.is_fullscreen = False
