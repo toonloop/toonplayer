@@ -27,12 +27,12 @@ def draw_square():
     glEnd()
 
 
-# Create OpenGL-capable gtk.DrawingArea by subclassing
-# gtk.gtkgl.Widget mixin.
-
 class SimpleDrawingArea(gtk.DrawingArea, gtk.gtkgl.Widget):
     """
     OpenGL drawing area for simple demo.
+    
+    OpenGL-capable gtk.DrawingArea by subclassing
+    gtk.gtkgl.Widget mixin.
     """
     def __init__(self, glconfig):
         gtk.DrawingArea.__init__(self)
@@ -52,23 +52,19 @@ class SimpleDrawingArea(gtk.DrawingArea, gtk.gtkgl.Widget):
         if not gldrawable.gl_begin(glcontext):
             return
 
-        glClearColor(0.0, 0.0, 0.0, 1.0)
-
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
 
         glOrtho(-4.0, 4.0, -3.0, 3.0, -1.0, 1.0)
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
-        #glMatrixMode(GL_MODELVIEW)
 
-        #TODO:
-        #GL.glEnable(GL.GL_TEXTURE_RECTANGLE_ARB) # 2D)
-        #GL.glEnable(GL.GL_BLEND)
-        #GL.glShadeModel(GL.GL_SMOOTH)
-        #GL.glClearColor(0.0, 0.0, 0.0, 0.0) # black background
-        #GL.glColor4f(1.0, 1.0, 1.0, 1.0) # self.config.playback_opacity) # for now we use it for all
-        #GL.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA)
+        glEnable(GL_TEXTURE_RECTANGLE_ARB) # 2D)
+        glEnable(GL_BLEND)
+        glShadeModel(GL_SMOOTH)
+        glClearColor(0.0, 0.0, 0.0, 1.0) # black background
+        glColor4f(1.0, 1.0, 1.0, 1.0) # default color is white
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
         # OpenGL end
         gldrawable.gl_end()
@@ -78,6 +74,8 @@ class SimpleDrawingArea(gtk.DrawingArea, gtk.gtkgl.Widget):
         # and rendering context.
         gldrawable = self.get_gl_drawable()
         glcontext = self.get_gl_context()
+        if gldrawable is None:
+            return False
         # OpenGL begin
         if not gldrawable.gl_begin(glcontext):
             return False
@@ -91,14 +89,16 @@ class SimpleDrawingArea(gtk.DrawingArea, gtk.gtkgl.Widget):
         # and rendering context.
         gldrawable = self.get_gl_drawable()
         glcontext = self.get_gl_context()
+        if gldrawable is None:
+            return False
         # OpenGL begin
         if not gldrawable.gl_begin(glcontext):
             return False
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-        #glCallList(1)
+        
+        self.draw()
 
-        glColor4f(1.0, 0.8, 0.2, 1.0)
-        draw_square()
+        # DONE
         if gldrawable.is_double_buffered():
             gldrawable.swap_buffers()
         else:
@@ -107,21 +107,30 @@ class SimpleDrawingArea(gtk.DrawingArea, gtk.gtkgl.Widget):
         gldrawable.gl_end()
         return False
 
+    def draw(self):
+        # DRAW STUFF HERE
+        glColor4f(1.0, 0.8, 0.2, 1.0)
+        draw_square()
 
-class SimpleDemo(gtk.Window):
-    """Simple demo application."""
-
+class SimpleDemo(object):
+    """
+    Simple demo application.
+    """
     def __init__(self):
-        gtk.Window.__init__(self)
-        self.set_title('Testing OpenGL')
+        self.is_fullscreen = False
+        self.verbose = True
+        self.window = gtk.Window()
+        self.window.set_title('Testing OpenGL')
         if sys.platform != 'win32':
-            self.set_resize_mode(gtk.RESIZE_IMMEDIATE)
-        self.set_reallocate_redraws(True)
-        self.connect('delete_event', self.on_delete_event)
+            self.window.set_resize_mode(gtk.RESIZE_IMMEDIATE)
+        self.window.set_reallocate_redraws(True)
+        self.window.connect('delete_event', self.on_delete_event)
+        self.window.connect("key-press-event", self.on_key_pressed)
+        self.window.connect("window-state-event", self.on_window_state_event)
 
         # VBox to hold everything.
         vbox = gtk.VBox()
-        self.add(vbox)
+        self.window.add(vbox)
         # Query the OpenGL extension version.
         print "OpenGL extension version - %d.%d\n" % gtk.gdkgl.query_version()
         # Configure OpenGL framebuffer.
@@ -142,20 +151,48 @@ class SimpleDemo(gtk.Window):
         print "has depth buffer:",        glconfig.has_depth_buffer()
         print "has stencil buffer:",      glconfig.has_stencil_buffer()
         print "has accumulation buffer:", glconfig.has_accum_buffer()
-        # SimpleDrawingArea
+        # Drawing Area
         drawing_area = SimpleDrawingArea(glconfig)
         drawing_area.set_size_request(WIDTH, HEIGHT)
         vbox.pack_start(drawing_area)
 
         # A quit button.
         button = gtk.Button('Quit')
-        button.connect('clicked', gtk.main_quit)
+        button.connect('clicked', self.on_quit_clicked)
         vbox.pack_start(button, expand=False)
+        self.window.show_all()
 
-    def on_delete_event(self, widget, event):
+    def on_delete_event(self, widget, event=None):
         gtk.main_quit()
+
+    def on_quit_clicked(self, widget, event=None):
+        gtk.main_quit()
+        
+    def on_key_pressed(self, widget, event):
+        name = gtk.gdk.keyval_name(event.keyval)
+        if name == "Escape":
+            self.toggle_fullscreen()
+        return True
+
+    def toggle_fullscreen(self):
+        if self.is_fullscreen:
+            self.window.unfullscreen()
+        else:
+            self.window.fullscreen()
+
+    def on_window_state_event(self, widget, event):
+        #print 'window state event', event.type, event.changed_mask, 
+        #print event.new_window_state
+        if event.new_window_state == gtk.gdk.WINDOW_STATE_FULLSCREEN:
+            if self.verbose:
+                print('fullscreen on')
+            self.is_fullscreen = True
+        elif event.new_window_state == 0: #gtk.gdk.WINDOW_STATE_WITHDRAWN:
+            if self.verbose:
+                print('fullscreen off')
+            self.is_fullscreen = False
+        return True
 
 if __name__ == '__main__':
     app = SimpleDemo()
-    app.show_all()
     gtk.main()
