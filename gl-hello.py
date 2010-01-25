@@ -28,6 +28,12 @@ def draw_square():
     glVertex2f(-1.0, 1.0) # Top Left Of Quad
     glEnd()
 
+def draw_line(from_x, from_y, to_x, to_y):
+    glBegin(GL_LINES)
+    glVertex2f(from_x, from_y) 
+    glVertex2f(to_x, to_y) 
+    glEnd()
+    
 
 class SimpleDrawingArea(gtk.DrawingArea, gtk.gtkgl.Widget):
     """
@@ -114,7 +120,12 @@ class SimpleDrawingArea(gtk.DrawingArea, gtk.gtkgl.Widget):
         glColor4f(1.0, 0.8, 0.2, 1.0)
         draw_square()
 
-class SimpleDemo(object):
+        glColor4f(1.0, 1.0, 0.0, 0.8)
+        for x in [4, 3.5, 3, 2.5, 2, 1.5, 1, 0.5,  0, -0.5, -1, -1.5, -2, -2.5, -3, -3.5, -4]:
+            draw_line(float(x), -4.0, float(x), 4.0)
+            draw_line(-4.0, float(x), 4.0, float(x))
+
+class SimpleApp(object):
     """
     Simple demo application.
     """
@@ -123,8 +134,6 @@ class SimpleDemo(object):
         self.verbose = True
         self.window = gtk.Window()
         self.window.set_title('Testing OpenGL')
-        if sys.platform != 'win32':
-            self.window.set_resize_mode(gtk.RESIZE_IMMEDIATE)
         self.window.set_reallocate_redraws(True)
         self.window.connect('delete_event', self.on_delete_event)
         self.window.connect("key-press-event", self.on_key_pressed)
@@ -212,7 +221,7 @@ class SimpleDemo(object):
 
         for c in parent.get_children():
             if c != widget:
-                print "toggle %s visibility %s" % (c, hide)
+                #print "toggle %s visibility %s" % (c, hide)
                 if hide:
                     c.hide()
                 else:
@@ -222,5 +231,5 @@ class SimpleDemo(object):
         self._showhideWidgets(parent, hide)
 
 if __name__ == '__main__':
-    app = SimpleDemo()
+    app = SimpleApp()
     gtk.main()
