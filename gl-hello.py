@@ -35,15 +35,16 @@ def draw_line(from_x, from_y, to_x, to_y):
     glEnd()
     
 
-class SimpleDrawingArea(gtk.DrawingArea, gtk.gtkgl.Widget):
+class GlDrawingArea(gtk.DrawingArea, gtk.gtkgl.Widget):
     """
     OpenGL drawing area for simple demo.
     
     OpenGL-capable gtk.DrawingArea by subclassing
     gtk.gtkgl.Widget mixin.
     """
-    def __init__(self, glconfig):
+    def __init__(self, glconfig, app):
         gtk.DrawingArea.__init__(self)
+        self._app = app # let's pass it 
         # Set OpenGL-capability to the drawing area
         self.set_gl_capability(glconfig)
         # Connect the relevant signals.
@@ -87,7 +88,12 @@ class SimpleDrawingArea(gtk.DrawingArea, gtk.gtkgl.Widget):
         # OpenGL begin
         if not gldrawable.gl_begin(glcontext):
             return False
-        glViewport(0, 0, self.allocation.width, self.allocation.height)
+        print "viewport:", 0, 0, self.allocation.width, self.allocation.height
+        print "window size:", self._app.window.get_size()
+        if self._app.is_fullscreen:
+            glViewport(0, 0, *self._app.actual_size)
+        else:
+            glViewport(0, 0, self.allocation.width, self.allocation.height)
         # OpenGL end
         gldrawable.gl_end()
         return False
@@ -138,7 +144,8 @@ class SimpleApp(object):
         self.window.connect('delete_event', self.on_delete_event)
         self.window.connect("key-press-event", self.on_key_pressed)
         self.window.connect("window-state-event", self.on_window_state_event)
-
+        self.window.connect("configure_event", self.on_configure_event)
+        self.actual_size = (WIDTH, HEIGHT)
         # VBox to hold everything.
         vbox = gtk.VBox()
         self.window.add(vbox)
@@ -163,7 +170,7 @@ class SimpleApp(object):
         print "has stencil buffer:",      glconfig.has_stencil_buffer()
         print "has accumulation buffer:", glconfig.has_accum_buffer()
         # Drawing Area
-        self.drawing_area = SimpleDrawingArea(glconfig)
+        self.drawing_area = GlDrawingArea(glconfig, self)
         self.drawing_area.set_size_request(WIDTH, HEIGHT)
         vbox.pack_start(self.drawing_area)
 
@@ -210,7 +217,15 @@ class SimpleApp(object):
                 print('fullscreen off')
             self.is_fullscreen = False
         return True
-    
+
+    def on_configure_event(self, widget, event=None):
+        """
+        This is where we should measure the window size.
+        """
+        print "new size:", self.window.get_size()
+        self.actual_size = self.window.get_size()
+
+
     def _showhideWidgets(self, widget, hide=True):
         """
         Show or hide all widgets in the window except the given
@@ -231,5 +246,6 @@ class SimpleApp(object):
         self._showhideWidgets(parent, hide)
 
 if __name__ == '__main__':
+    print "screen is %sx%s" % (gtk.gdk.screen_width(), gtk.gdk.screen_height())
     app = SimpleApp()
     gtk.main()
