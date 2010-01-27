@@ -299,11 +299,11 @@ if __name__ == '__main__':
         usage()
     else:
         full_file_path = os.path.abspath(args[0])
-        uri = "file:/%s" % (full_file_path)
-        if not gst.uri_is_valid(full_file_path):
-            sys.stderr.write("Error: Invalid URI: %s\n" % full_file_path)
+        uri = "file://%s" % (full_file_path)
+        if not gst.uri_is_valid(uri):
+            sys.stderr.write("Error: Invalid URI: %s\n" % (uri))
             sys.exit(1)
         print "using", uri
-        w.load_file(full_file_path)
+        w.load_file(uri)
         w.show_all()
         gtk.main()
