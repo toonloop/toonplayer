@@ -29,11 +29,13 @@ def draw_square():
     glEnd()
 
 def draw_line(from_x, from_y, to_x, to_y):
+    """
+    Draws a line between given points.
+    """
     glBegin(GL_LINES)
     glVertex2f(from_x, from_y) 
     glVertex2f(to_x, to_y) 
     glEnd()
-    
 
 class GlDrawingArea(gtk.DrawingArea, gtk.gtkgl.Widget):
     """
@@ -53,6 +55,11 @@ class GlDrawingArea(gtk.DrawingArea, gtk.gtkgl.Widget):
         self.connect('expose_event',    self._on_expose_event)
 
     def _on_realize(self, *args):
+        """
+        Called at the creation of the drawing area.
+
+        Sets up the OpenGL rendering context.
+        """
         # Obtain a reference to the OpenGL drawable
         # and rendering context.
         gldrawable = self.get_gl_drawable()
@@ -79,6 +86,11 @@ class GlDrawingArea(gtk.DrawingArea, gtk.gtkgl.Widget):
         gldrawable.gl_end()
 
     def _on_configure_event(self, *args):
+        """
+        Called when the drawing area is resized.
+
+        Sets up the OpenGL view port dimensions.
+        """
         # Obtain a reference to the OpenGL drawable
         # and rendering context.
         gldrawable = self.get_gl_drawable()
@@ -99,6 +111,11 @@ class GlDrawingArea(gtk.DrawingArea, gtk.gtkgl.Widget):
         return False
 
     def _on_expose_event(self, *args):
+        """
+        Called on every frame rendering of the drawing area.
+
+        Calls self.draw() and swaps the buffers.
+        """
         # Obtain a reference to the OpenGL drawable
         # and rendering context.
         gldrawable = self.get_gl_drawable()
@@ -122,6 +139,9 @@ class GlDrawingArea(gtk.DrawingArea, gtk.gtkgl.Widget):
         return False
 
     def draw(self):
+        """
+        Draws each frame.
+        """
         # DRAW STUFF HERE
         glColor4f(1.0, 0.8, 0.2, 1.0)
         draw_square()
@@ -131,9 +151,9 @@ class GlDrawingArea(gtk.DrawingArea, gtk.gtkgl.Widget):
             draw_line(float(x), -4.0, float(x), 4.0)
             draw_line(-4.0, float(x), 4.0, float(x))
 
-class SimpleApp(object):
+class App(object):
     """
-    Simple demo application.
+    Main window of the application.
     """
     def __init__(self):
         self.is_fullscreen = False
@@ -162,13 +182,14 @@ class SimpleApp(object):
         except gtk.gdkgl.NoMatches:
             display_mode &= ~gtk.gdkgl.MODE_DOUBLE
             glconfig = gtk.gdkgl.Config(mode=display_mode)
-        print "is RGBA:",                 glconfig.is_rgba()
-        print "is double-buffered:",      glconfig.is_double_buffered()
-        print "is stereo:",               glconfig.is_stereo()
-        print "has alpha:",               glconfig.has_alpha()
-        print "has depth buffer:",        glconfig.has_depth_buffer()
-        print "has stencil buffer:",      glconfig.has_stencil_buffer()
-        print "has accumulation buffer:", glconfig.has_accum_buffer()
+        if self.verbose:
+            print "is RGBA:",                 glconfig.is_rgba()
+            print "is double-buffered:",      glconfig.is_double_buffered()
+            print "is stereo:",               glconfig.is_stereo()
+            print "has alpha:",               glconfig.has_alpha()
+            print "has depth buffer:",        glconfig.has_depth_buffer()
+            print "has stencil buffer:",      glconfig.has_stencil_buffer()
+            print "has accumulation buffer:", glconfig.has_accum_buffer()
         # Drawing Area
         self.drawing_area = GlDrawingArea(glconfig, self)
         self.drawing_area.set_size_request(WIDTH, HEIGHT)
@@ -182,8 +203,7 @@ class SimpleApp(object):
         self.drawing_area.show()
         button.show()
         vbox.show()
-        self.window.show()
-        #self.window.show_all()
+        self.window.show() # not show_all() !
 
     def on_delete_event(self, widget, event=None):
         gtk.main_quit()
@@ -247,5 +267,5 @@ class SimpleApp(object):
 
 if __name__ == '__main__':
     print "screen is %sx%s" % (gtk.gdk.screen_width(), gtk.gdk.screen_height())
-    app = SimpleApp()
+    app = App()
     gtk.main()
