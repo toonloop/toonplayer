@@ -4,13 +4,18 @@
 
 import pygtk
 pygtk.require('2.0')
+
 import sys
+
 import gobject
+gobject.threads_init()
+
 import pygst
 pygst.require('0.10')
 import gst
 import gst.interfaces
 import gtk
+gtk.gdk.threads_init()
 
 class GstPlayer:
     def __init__(self, videowidget):
@@ -24,15 +29,20 @@ class GstPlayer:
         bus.add_signal_watch()
         bus.connect('sync-message::element', self.on_sync_message)
         bus.connect('message', self.on_message)
+        self.looping = True
 
     def on_sync_message(self, bus, message):
         print "on_sync_message", bus, message
         if message.structure is None:
             return
         if message.structure.get_name() == 'prepare-xwindow-id':
+            # Sync with the X server before giving the X-id to the sink
+            gtk.gdk.threads_enter()
+            gtk.gdk.display_get_default().sync()
             self.videowidget.set_sink(message.src)
             message.src.set_property('force-aspect-ratio', True)
-
+            gtk.gdk.threads_leave()
+            
     def on_message(self, bus, message):
         t = message.type
         if t == gst.MESSAGE_ERROR:
@@ -45,6 +55,8 @@ class GstPlayer:
             if self.on_eos:
                 self.on_eos()
             self.playing = False
+            if self.looping:
+                self.play()
 
     def set_location(self, location):
         self.player.set_property('uri', location)
@@ -89,7 +101,7 @@ class GstPlayer:
         gst.info("playing player")
         self.player.set_state(gst.STATE_PLAYING)
         self.playing = True
-
+        
     def stop(self):
         self.player.set_state(gst.STATE_NULL)
         gst.info("stopped player")
@@ -99,7 +111,7 @@ class GstPlayer:
 
     def is_playing(self):
         return self.playing
-
+    
 class VideoWidget(gtk.DrawingArea):
     def __init__(self):
         gtk.DrawingArea.__init__(self)
@@ -132,7 +144,7 @@ class PlayerWindow(gtk.Window):
             self.player.seek(0L)
             self.play_toggled()
         self.player.on_eos = lambda *x: on_eos()
-
+        
         self.update_id = -1
         self.changed_id = -1
         self.seek_timeout_id = -1
@@ -148,17 +160,17 @@ class PlayerWindow(gtk.Window):
     def load_file(self, location):
         print "loading %s" % (location)
         self.player.set_location(location)
-
+                                  
     def create_ui(self):
         vbox = gtk.VBox()
         self.add(vbox)
 
         self.videowidget = VideoWidget()
         vbox.pack_start(self.videowidget)
-
+        
         hbox = gtk.HBox()
         vbox.pack_start(hbox, fill=False, expand=False)
-
+        
         self.pause_image = gtk.image_new_from_stock(gtk.STOCK_MEDIA_PAUSE,
                                                     gtk.ICON_SIZE_BUTTON)
         self.pause_image.show()
@@ -173,7 +185,7 @@ class PlayerWindow(gtk.Window):
         hbox.pack_start(button, False)
         button.set_property('has-default', True)
         button.connect('clicked', lambda *args: self.play_toggled())
-
+        
         self.adjustment = gtk.Adjustment(0.0, 0.00, 100.0, 0.1, 1.0, 1.0)
         hscale = gtk.HScale(self.adjustment)
         hscale.set_digits(2)
@@ -204,7 +216,7 @@ class PlayerWindow(gtk.Window):
             real = 0
         else:
             real = value * self.p_duration / 100
-
+        
         seconds = real / gst.SECOND
 
         return "%02d:%02d" % (seconds / 60, seconds % 60)
@@ -212,7 +224,7 @@ class PlayerWindow(gtk.Window):
     def scale_button_press_cb(self, widget, event):
         # see seek.c:start_seek
         gst.debug('starting seek')
-
+        
         self.button.set_sensitive(False)
         self.was_playing = self.player.is_playing()
         if self.was_playing:
@@ -227,7 +239,7 @@ class PlayerWindow(gtk.Window):
         if self.changed_id == -1:
             self.changed_id = self.hscale.connect('value-changed',
                 self.scale_value_changed_cb)
-
+            
     def scale_value_changed_cb(self, scale):
         # see seek.c:seek_cb
         real = long(scale.get_value() * self.p_duration / 100) # in ns
@@ -264,25 +276,34 @@ class PlayerWindow(gtk.Window):
 
         return True
 
-def main(args):
+
+__version__ = "0.1"
+if __name__ == '__main__':
+    import os
+    import optparse
+    parser = optparse.OptionParser(usage="%prog", version=str(__version__))
+    (options, args) = parser.parse_args()
+    
     def usage():
         sys.stderr.write("usage: %s URI-OF-MEDIA-FILE\n" % args[0])
         sys.exit(1)
+    
+    # Need to register our derived widget types for implicit event
+    # handlers to get called.
+    gobject.type_register(PlayerWindow)
+    gobject.type_register(VideoWidget)
 
     w = PlayerWindow()
 
-    if len(args) != 2:
+    if len(args) < 1:
         usage()
-
-    if not gst.uri_is_valid(args[1]):
-        sys.stderr.write("Error: Invalid URI: %s\n" % args[1])
-        sys.exit(1)
-
-    w.load_file(args[1])
-    w.show_all()
-    print "gtk.main()"
-    gtk.main()
-
-if __name__ == '__main__':
-    sys.exit(main(sys.argv))
-
+    else:
+        full_file_path = os.path.abspath(args[0])
+        uri = "file:/%s" % (full_file_path)
+        if not gst.uri_is_valid(full_file_path):
+            sys.stderr.write("Error: Invalid URI: %s\n" % full_file_path)
+            sys.exit(1)
+        print "using", uri
+        w.load_file(full_file_path)
+        w.show_all()
+        gtk.main()
