@@ -3,6 +3,7 @@
 # vi:si:et:sw=4:sts=4:ts=4
 
 import sys
+import glob
 from twisted.internet import gtk2reactor
 gtk2reactor.install() # has to be done before importing reactor and gtk
 from twisted.internet import reactor
@@ -59,7 +60,13 @@ class GstPlayer:
                 self.play()
 
     def set_location(self, location):
+        was_playing = False
+        if self.playing:
+            was_playing = True
+            self.stop()
         self.player.set_property('uri', location)
+        if was_playing:
+            self.play()
 
     def query_position(self):
         "Returns a (position, duration) tuple"
@@ -67,12 +74,10 @@ class GstPlayer:
             position, format = self.player.query_position(gst.FORMAT_TIME)
         except:
             position = gst.CLOCK_TIME_NONE
-
         try:
             duration, format = self.player.query_duration(gst.FORMAT_TIME)
         except:
             duration = gst.CLOCK_TIME_NONE
-
         return (position, duration)
 
     def seek(self, location):
@@ -84,7 +89,6 @@ class GstPlayer:
             gst.SEEK_FLAG_FLUSH | gst.SEEK_FLAG_ACCURATE,
             gst.SEEK_TYPE_SET, location,
             gst.SEEK_TYPE_NONE, 0)
-
         res = self.player.send_event(event)
         if res:
             gst.info("setting new stream time to 0")
@@ -135,9 +139,7 @@ class PlayerWindow(gtk.Window):
     def __init__(self):
         gtk.Window.__init__(self)
         self.set_default_size(410, 325)
-
         self.create_ui()
-
         self.player = GstPlayer(self.videowidget)
 
         def on_eos():
@@ -148,7 +150,6 @@ class PlayerWindow(gtk.Window):
         self.update_id = -1
         self.changed_id = -1
         self.seek_timeout_id = -1
-
         self.p_position = gst.CLOCK_TIME_NONE
         self.p_duration = gst.CLOCK_TIME_NONE
 
@@ -170,12 +171,13 @@ class PlayerWindow(gtk.Window):
         
         hbox = gtk.HBox()
         vbox.pack_start(hbox, fill=False, expand=False)
-        
-        self.pause_image = gtk.image_new_from_stock(gtk.STOCK_MEDIA_PAUSE,
-                                                    gtk.ICON_SIZE_BUTTON)
+        self.pause_image = gtk.image_new_from_stock(
+            gtk.STOCK_MEDIA_PAUSE,
+            gtk.ICON_SIZE_BUTTON)
         self.pause_image.show()
-        self.play_image = gtk.image_new_from_stock(gtk.STOCK_MEDIA_PLAY,
-                                                   gtk.ICON_SIZE_BUTTON)
+        self.play_image = gtk.image_new_from_stock(
+            gtk.STOCK_MEDIA_PLAY,
+            gtk.ICON_SIZE_BUTTON)
         self.play_image.show()
         self.button = button = gtk.Button()
         button.add(self.play_image)
@@ -185,7 +187,6 @@ class PlayerWindow(gtk.Window):
         hbox.pack_start(button, False)
         button.set_property('has-default', True)
         button.connect('clicked', lambda *args: self.play_toggled())
-        
         self.adjustment = gtk.Adjustment(0.0, 0.00, 100.0, 0.1, 1.0, 1.0)
         hscale = gtk.HScale(self.adjustment)
         hscale.set_digits(2)
@@ -195,9 +196,9 @@ class PlayerWindow(gtk.Window):
         hscale.connect('format-value', self.scale_format_value_cb)
         hbox.pack_start(hscale)
         self.hscale = hscale
-
-        self.videowidget.connect_after('realize',
-                                       lambda *x: self.play_toggled())
+        self.videowidget.connect_after(
+            'realize',
+            lambda *x: self.play_toggled())
 
     def play_toggled(self):
         self.button.remove(self.button.child)
@@ -207,8 +208,9 @@ class PlayerWindow(gtk.Window):
         else:
             self.player.play()
             if self.update_id == -1:
-                self.update_id = gobject.timeout_add(self.UPDATE_INTERVAL,
-                                                     self.update_scale_cb)
+                self.update_id = gobject.timeout_add(
+                    self.UPDATE_INTERVAL,
+                    self.update_scale_cb)
             self.button.add(self.pause_image)
 
     def scale_format_value_cb(self, scale, value):
@@ -222,17 +224,14 @@ class PlayerWindow(gtk.Window):
     def scale_button_press_cb(self, widget, event):
         # see seek.c:start_seek
         gst.debug('starting seek')
-        
         self.button.set_sensitive(False)
         self.was_playing = self.player.is_playing()
         if self.was_playing:
             self.player.pause()
-
         # don't timeout-update position during seek
         if self.update_id != -1:
             gobject.source_remove(self.update_id)
             self.update_id = -1
-
         # make sure we get changed notifies
         if self.changed_id == -1:
             self.changed_id = self.hscale.connect('value-changed',
@@ -250,7 +249,6 @@ class PlayerWindow(gtk.Window):
         # see seek.cstop_seek
         widget.disconnect(self.changed_id)
         self.changed_id = -1
-
         self.button.set_sensitive(True)
         if self.seek_timeout_id != -1:
             gobject.source_remove(self.seek_timeout_id)
@@ -259,7 +257,6 @@ class PlayerWindow(gtk.Window):
             gst.debug('released slider, setting back to playing')
             if self.was_playing:
                 self.player.play()
-
         if self.update_id != -1:
             self.error('Had a previous update timeout id')
         else:
@@ -272,6 +269,55 @@ class PlayerWindow(gtk.Window):
             value = self.p_position * 100.0 / self.p_duration
             self.adjustment.set_value(value)
         return True
+
+class VeeJay(object):
+    """
+    Chooses movie files to play.
+    """
+    def __init__(self, player, dir_path=None):
+        self.player = player
+        if dir_path is None:
+            self.dir_path = os.getcwd()
+        else:
+            self.dir_path = os.path.abspath(os.path.expanduser(dir_path))
+        if not os.path.isdir(self.dir_path):
+            raise RuntimeError("%s is not a directory." % (self.dir_path))
+        #self.looping_call = 
+        self.previous_clip_path = None
+        #reactor.callLater(5, self.choose_next)
+        self.clips = []
+
+    def load_clip_list(self):
+        self.clips = glob.glob(os.path.join(self.dir_path, "*.mov"))
+        print("Found clips %s" % (self.clips))
+        if len(self.clips) == 0:
+            raise RuntimeError("No clips in directory %s" % (self.dir_path))
+    
+    def choose_next(self):
+        self.load_clip_list()
+        prev = -1
+        if self.previous_clip_path in self.clips:
+            prev = self.clips.index(self.previous_clip_path)
+        print "prev:", prev
+        next = prev + 1
+        if len(self.clips) == 0:
+            print("Not clip to play.")
+        elif len(self.clips) == 1:
+            print("Only one clip to play.")
+        else:
+            if len(self.clips) == next:
+                next = 0
+            print "next:", next
+            file_path = self.clips[next]
+            self.previous_clip_path = file_path
+            print "choosing file", file_path
+            uri = "file://%s" % (file_path)
+            if not gst.uri_is_valid(uri):
+                msg = "Error: Invalid URI: %s\n" % (uri)
+                raise RuntimeError(msg)
+            else:
+                self.player.set_location(uri)
+        reactor.callLater(5, self.choose_next)
 
 __version__ = "0.1"
 
@@ -290,18 +336,20 @@ if __name__ == '__main__':
     gobject.type_register(PlayerWindow)
     gobject.type_register(VideoWidget)
 
-    w = PlayerWindow()
+    app = PlayerWindow()
 
     if len(args) < 1:
         usage()
     else:
-        full_file_path = os.path.abspath(args[0])
-        uri = "file://%s" % (full_file_path)
-        if not gst.uri_is_valid(uri):
-            sys.stderr.write("Error: Invalid URI: %s\n" % (uri))
-            sys.exit(1)
-        print "using", uri
-        w.load_file(uri)
-        w.show_all()
+        vj = VeeJay(app.player, args[0])
+        vj.load_clip_list()
+        vj.choose_next()
+        #full_file_path = os.path.abspath(args[0])
+        #uri = "file://%s" % (full_file_path)
+        #if not gst.uri_is_valid(uri):
+        #    sys.stderr.write("Error: Invalid URI: %s\n" % (uri))
+        #    sys.exit(1)
+        #print "using", uri
+        #w.load_file(uri)
+        app.show_all()
         reactor.run()
-        #gtk.main()
