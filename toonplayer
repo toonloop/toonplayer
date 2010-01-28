@@ -18,12 +18,21 @@ import gst.interfaces
 import gtk
 gtk.gdk.threads_init()
 
+
+
+def call_callbacks(callbacks, *args, **kwargs):
+    """
+    Calls each callable in the list of callbacks with the arguments and keyword-arguments provided.
+    """
+    for c in callbacks:
+        c(*args, **kwargs)
+
 class GstPlayer:
     def __init__(self, videowidget):
         self.playing = False
         self.player = gst.element_factory_make("playbin", "player")
         self.videowidget = videowidget
-        self.on_eos = False
+        self.eos_callbacks = [] 
 
         bus = self.player.get_bus()
         bus.enable_sync_message_emission()
@@ -49,12 +58,10 @@ class GstPlayer:
         if t == gst.MESSAGE_ERROR:
             err, debug = message.parse_error()
             print "Error: %s" % err, debug
-            if self.on_eos:
-                self.on_eos()
+            call_callbacks(self.eos_callbacks)
             self.playing = False
         elif t == gst.MESSAGE_EOS:
-            if self.on_eos:
-                self.on_eos()
+            call_callbacks(self.eos_callbacks)
             self.playing = False
             if self.looping:
                 self.play()
@@ -139,36 +146,10 @@ class PlayerWindow(gtk.Window):
     def __init__(self):
         gtk.Window.__init__(self)
         self.set_default_size(410, 325)
-        self.create_ui()
-        self.player = GstPlayer(self.videowidget)
-
-        def on_eos():
-            self.player.seek(0L)
-            self.play_toggled()
-        self.player.on_eos = lambda *x: on_eos()
-        
-        self.update_id = -1
-        self.changed_id = -1
-        self.seek_timeout_id = -1
-        self.p_position = gst.CLOCK_TIME_NONE
-        self.p_duration = gst.CLOCK_TIME_NONE
-
-        def on_delete_event():
-            self.player.stop()
-            gtk.main_quit()
-        self.connect('delete-event', lambda *x: on_delete_event())
-
-    def load_file(self, location):
-        print "loading %s" % (location)
-        self.player.set_location(location)
-                                  
-    def create_ui(self):
         vbox = gtk.VBox()
         self.add(vbox)
-
         self.videowidget = VideoWidget()
         vbox.pack_start(self.videowidget)
-        
         hbox = gtk.HBox()
         vbox.pack_start(hbox, fill=False, expand=False)
         self.pause_image = gtk.image_new_from_stock(
@@ -199,6 +180,82 @@ class PlayerWindow(gtk.Window):
         self.videowidget.connect_after(
             'realize',
             lambda *x: self.play_toggled())
+        self.is_fullscreen = False
+        self.player = GstPlayer(self.videowidget)
+        self.player.eos_callbacks.append(self.on_video_eos)
+        self.update_id = -1
+        self.changed_id = -1
+        self.seek_timeout_id = -1
+        self.p_position = gst.CLOCK_TIME_NONE
+        self.p_duration = gst.CLOCK_TIME_NONE
+        # window events
+        self.connect("key-press-event", self.on_key_pressed)
+        self.connect("window-state-event", self.on_window_state_event)
+        self.connect('delete-event', self.on_delete_event)
+
+    def on_video_eos(self):
+        """
+        Called when the player calls its eos_callbacks
+        """
+        self.player.seek(0L)
+        self.play_toggled()
+
+    def load_file(self, location):
+        print "loading %s" % (location)
+        self.player.set_location(location)
+
+    def on_delete_event(self, *args):
+        self.player.stop()
+        reactor.stop()
+    
+    def on_key_pressed(self, widget, event):
+        """
+        Escape toggles fullscreen mode.
+        """
+        name = gtk.gdk.keyval_name(event.keyval)
+        if name == "Escape":
+            self.toggle_fullscreen()
+        return True
+    
+    def toggle_fullscreen(self):
+        """
+        Toggles the fullscreen mode on/off.
+        """
+        if self.is_fullscreen:
+            self.unfullscreen()
+            self._showhideWidgets(self.videowidget, False)
+        else:
+            self.fullscreen()
+            self._showhideWidgets(self.videowidget, True)
+
+    def on_window_state_event(self, widget, event):
+        """
+        Called when toggled fullscreen.
+        """
+        #print 'window state event', event.type, event.changed_mask, 
+        #print event.new_window_state
+        self.is_fullscreen = event.new_window_state & gtk.gdk.WINDOW_STATE_FULLSCREEN != 0
+        print('fullscreen %s' % (self.is_fullscreen))
+        return True
+    
+    def _showhideWidgets(self, except_widget, hide=True):
+        """
+        Show or hide all widgets in the window except the given
+        widget. Used for going fullscreen: in fullscreen, you only
+        want the clutter embed widget and the menu bar etc.
+        Recursive.
+        """
+        parent = except_widget.get_parent()
+        for c in parent.get_children():
+            if c != except_widget:
+                #print "toggle %s visibility %s" % (c, hide)
+                if hide:
+                    c.hide()
+                else:
+                    c.show()
+        if parent == self.window:
+            return
+        self._showhideWidgets(parent, hide)
 
     def play_toggled(self):
         self.button.remove(self.button.child)

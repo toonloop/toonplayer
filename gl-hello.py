@@ -287,7 +287,6 @@ class App(object):
         Show or hide all widgets in the window except the given
         widget. Used for going fullscreen: in fullscreen, you only
         want the clutter embed widget and the menu bar etc.
-
         Recursive.
         """
         parent = except_widget.get_parent()
