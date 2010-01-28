@@ -1,0 +1,5 @@
+lunch (0.1.0-0ubuntu1) hardy; urgency=low
+
+  * Initial packaging.
+
+ -- Alexandre Quessy <alexandre@quessy.net>  Wed, 27 Jan 2010 22:34:46 -0500
