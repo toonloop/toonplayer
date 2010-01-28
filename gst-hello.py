@@ -2,14 +2,14 @@
 # -*- Mode: Python -*-
 # vi:si:et:sw=4:sts=4:ts=4
 
-import pygtk
-pygtk.require('2.0')
-
 import sys
-
+from twisted.internet import gtk2reactor
+gtk2reactor.install() # has to be done before importing reactor and gtk
+from twisted.internet import reactor
+#import pygtk
+#pygtk.require('2.0')
 import gobject
 gobject.threads_init()
-
 import pygst
 pygst.require('0.10')
 import gst
@@ -216,9 +216,7 @@ class PlayerWindow(gtk.Window):
             real = 0
         else:
             real = value * self.p_duration / 100
-        
         seconds = real / gst.SECOND
-
         return "%02d:%02d" % (seconds / 60, seconds % 60)
 
     def scale_button_press_cb(self, widget, event):
@@ -273,11 +271,10 @@ class PlayerWindow(gtk.Window):
         if self.p_position != gst.CLOCK_TIME_NONE:
             value = self.p_position * 100.0 / self.p_duration
             self.adjustment.set_value(value)
-
         return True
 
-
 __version__ = "0.1"
+
 if __name__ == '__main__':
     import os
     import optparse
@@ -306,4 +303,5 @@ if __name__ == '__main__':
         print "using", uri
         w.load_file(uri)
         w.show_all()
-        gtk.main()
+        reactor.run()
+        #gtk.main()
