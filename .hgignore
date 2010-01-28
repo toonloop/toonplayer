@@ -1,3 +1,14 @@
 syntax: glob
 *mov
 build/*
+.*.swp
+*.1
+toonplayer.png
+doc/*
+# debian stuff
+debian/toonplayer*
+debian/compat
+debian/files
+debian/pycompat
+debian/python-module-stampdir/toonplayer
+python-build-stamp-*

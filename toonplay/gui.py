@@ -198,10 +198,10 @@ class PlayerApp(object):
         button.add(self.play_image)
         button.set_property('can-default', True)
         button.set_focus_on_click(False)
+        hbox.pack_start(button, False)
         button.set_property('has-default', True)
         button.connect('clicked', self.play_toggled)
         button.show()
-        hbox.pack_start(button, False)
         
         # horizontal slider
         self.adjustment = gtk.Adjustment(0.0, 0.00, 100.0, 0.1, 1.0, 1.0)
