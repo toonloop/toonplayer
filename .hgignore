@@ -1,10 +1,11 @@
 syntax: glob
+*.pyc
 *mov
 build/*
 .*.swp
 *.1
 toonplayer.png
-doc/*
+html/*
 # debian stuff
 debian/toonplayer*
 debian/compat
