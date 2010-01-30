@@ -168,6 +168,17 @@ class VideoWidget(gtk.DrawingArea):
         self.imagesink = sink
         self.imagesink.set_xwindow_id(self.window.xid)
 
+def create_empty_cursor():
+    pix_data = """/* XPM */
+    static char * invisible_xpm[] = {
+    "1 1 1 1",
+    "       c None",
+    " "};"""
+    color = gtk.gdk.Color()
+    pix = gtk.gdk.pixmap_create_from_data(None, pix_data, 1, 1, 1, color, color)
+    return gtk.gdk.Cursor(pix, pix, color, color, 0, 0)
+
+
 class PlayerApp(object):
     UPDATE_INTERVAL = 500
     def __init__(self):
@@ -175,6 +186,9 @@ class PlayerApp(object):
         # window
         self.window = gtk.Window()
         self.window.set_default_size(410, 325)
+
+        # invisible cursor:
+        self.invisible_cursor = create_empty_cursor()
         
         # videowidget and button box
         vbox = gtk.VBox()
@@ -272,6 +286,11 @@ class PlayerApp(object):
         #print event.new_window_state
         self.is_fullscreen = event.new_window_state & gtk.gdk.WINDOW_STATE_FULLSCREEN != 0
         print('fullscreen %s' % (self.is_fullscreen))
+        if self.is_fullscreen:
+            # gtk.Window object has a gtk.gdk.Window attribute:
+            self.window.window.set_cursor(self.invisible_cursor)
+        else:
+            self.window.window.set_cursor(None)
         return True
     
     def _showhideWidgets(self, except_widget, hide=True):
