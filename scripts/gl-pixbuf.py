@@ -86,6 +86,7 @@ class GlDrawingArea(gtk.DrawingArea, gtk.gtkgl.Widget):
         self.connect_after('realize', self._on_realize)
         self.connect('configure_event', self._on_configure_event)
         self.connect('expose_event', self._on_expose_event)
+        self.texture_id = None
 
     def _on_realize(self, *args):
         """
@@ -156,6 +157,8 @@ class GlDrawingArea(gtk.DrawingArea, gtk.gtkgl.Widget):
         ratio = self.allocation.width / float(self.allocation.height)
         self._set_view(ratio)
         # OpenGL end
+        if self.texture_id is None:
+            self._create_texture()
         gldrawable.gl_end()
         return False
 
@@ -187,6 +190,22 @@ class GlDrawingArea(gtk.DrawingArea, gtk.gtkgl.Widget):
         # OpenGL end
         gldrawable.gl_end()
         return False
+    
+    def _create_texture(self):
+        pixels = "\0" * 320 * 240
+        w = 320
+        h = 240
+        
+        # Create Texture
+        tex_id = glGenTextures(1)
+        glBindTexture(GL_TEXTURE_RECTANGLE_ARB, tex_id)
+
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
+        glTexImage2D(GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGB, w, h, 0,
+                     GL_RGB, GL_UNSIGNED_BYTE, pixels)
+        glTexParameterf(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+        glTexParameterf(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
+        self.texture_id = tex_id
 
     def draw(self):
         """
@@ -207,10 +226,16 @@ class GlDrawingArea(gtk.DrawingArea, gtk.gtkgl.Widget):
             draw_line(float(x), -2.0, float(x), 2.0)
             draw_line(-2.0, float(x), 2.0, float(x))
 
-        glColor4f(1.0, 1.0, 1.0, 1.0)
-        glEnable(GL_TEXTURE_RECTANGLE_ARB)
-        glBindTexture(GL_TEXTURE_RECTANGLE_ARB, self._app.texture_id)
-        draw_textured_square()
+        if self.texture_id is not None:
+            glColor4f(1.0, 1.0, 1.0, 1.0)
+            glEnable(GL_TEXTURE_RECTANGLE_ARB)
+            glBindTexture(GL_TEXTURE_RECTANGLE_ARB, self.texture_id)
+            glPushMatrix()
+            glScale(0.4, 0.3, 1.0)
+            draw_textured_square(320, 240)
+            glPopMatrix()
+        else:
+            print "No texture to draw"
 
 
 class App(object):
@@ -282,40 +307,26 @@ class App(object):
         self.bus = self.pipeline.get_bus()
         self.bus.add_signal_watch()
         self.bus.connect('message', self.on_bus_message)
-        self.texture_id = self._create_texture()
         self.pipeline.set_state(gst.STATE_PLAYING)
 
     def on_bus_message(self, bus, message):
-        print "bus,mess:", bus, message
+        #print "bus,mess:", bus, message
         t = message.type
         if t == gst.MESSAGE_ELEMENT and message.structure.get_name() == 'pixbuf':
             pixbuf = message.structure['pixbuf']
             print "size:", pixbuf.get_width(), pixbuf.get_height()
-            self._update_texture(self.texture_id, pixbuf)
+            self._update_texture(pixbuf)
 
-    def _update_texture(self, texture_id, image):
-        pixels = image.get_pixels()
-        w = image.get_width() # 320
-        h = image.get_height() # 240
-        glBindTexture(GL_TEXTURE_RECTANGLE_ARB, texture_id)
-        glTexImage2D(GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGB, w, h, 0,
-                     GL_RGB, GL_UNSIGNED_BYTE, pixels)
-        
-    def _create_texture(self):
-        pixels = "\0" * 320 * 240
-        w = 320
-        h = 240
-        
-        # Create Texture
-        tex_id = glGenTextures(1)
-        glBindTexture(GL_TEXTURE_RECTANGLE_ARB, tex_id)
+    def _update_texture(self, image):
+        if self.drawing_area.texture_id is not None:
+            pixels = image.get_pixels()
+            w = image.get_width() # 320
+            h = image.get_height() # 240
+            glBindTexture(GL_TEXTURE_RECTANGLE_ARB, self.drawing_area.texture_id)
+            glTexImage2D(GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGB, w, h, 0,
+                         GL_RGB, GL_UNSIGNED_BYTE, pixels)
 
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
-        glTexImage2D(GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGB, w, h, 0,
-                     GL_RGB, GL_UNSIGNED_BYTE, pixels)
-        glTexParameterf(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
-        glTexParameterf(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
-        return tex_id
+        
  
     def on_delete_event(self, widget, event=None):
         """
