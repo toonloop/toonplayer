@@ -314,7 +314,7 @@ class App(object):
         t = message.type
         if t == gst.MESSAGE_ELEMENT and message.structure.get_name() == 'pixbuf':
             pixbuf = message.structure['pixbuf']
-            print "size:", pixbuf.get_width(), pixbuf.get_height()
+            #print "size:", pixbuf.get_width(), pixbuf.get_height()
             self._update_texture(pixbuf)
 
     def _update_texture(self, image):
@@ -323,10 +323,12 @@ class App(object):
             w = image.get_width() # 320
             h = image.get_height() # 240
             glBindTexture(GL_TEXTURE_RECTANGLE_ARB, self.drawing_area.texture_id)
-            glTexImage2D(GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGB, w, h, 0,
-                         GL_RGB, GL_UNSIGNED_BYTE, pixels)
 
-        
+            glTexImage2D(GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGB, w, h, 0,
+                GL_RGB, GL_UNSIGNED_BYTE, pixels)
+            glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
+            glTexParameterf(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+            glTexParameterf(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
  
     def on_delete_event(self, widget, event=None):
         """
