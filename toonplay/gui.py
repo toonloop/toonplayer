@@ -33,11 +33,10 @@ Main GUI of the application.
 import os
 import sys
 import glob
-#from twisted.internet import gtk2reactor
-#gtk2reactor.install() # has to be done before importing reactor and gtk
+if __name__ == "__main__":
+    from twisted.internet import gtk2reactor
+    gtk2reactor.install() # has to be done before importing reactor and gtk
 from twisted.internet import reactor
-#import pygtk
-#pygtk.require('2.0')
 import gobject
 gobject.threads_init()
 import pygst
@@ -55,11 +54,15 @@ def call_callbacks(callbacks, *args, **kwargs):
         c(*args, **kwargs)
 
 class GstPlayer:
+    """
+    GST pipeline.
+    playbin 
+    """
     def __init__(self, videowidget):
         self.playing = False
         self.player = gst.element_factory_make("playbin", "player")
         self.videowidget = videowidget
-        self.eos_callbacks = [] 
+        #self.eos_callbacks = [] 
 
         bus = self.player.get_bus()
         bus.enable_sync_message_emission()
@@ -67,6 +70,8 @@ class GstPlayer:
         bus.connect('sync-message::element', self.on_sync_message)
         bus.connect('message', self.on_message)
         self.looping = True
+        self.end_of_file_signal = [] # arg: self
+        self.current_location = None
 
     def on_sync_message(self, bus, message):
         print "on_sync_message", bus, message
@@ -85,11 +90,13 @@ class GstPlayer:
         if t == gst.MESSAGE_ERROR:
             err, debug = message.parse_error()
             print "Error: %s" % err, debug
-            call_callbacks(self.eos_callbacks)
+            #call_callbacks(self.eos_callbacks)
+            call_callbacks(self.end_of_file_signal, self, self.current_location)
             self.playing = False
         elif t == gst.MESSAGE_EOS:
-            call_callbacks(self.eos_callbacks)
             self.playing = False
+            #call_callbacks(self.eos_callbacks)
+            call_callbacks(self.end_of_file_signal, self, self.current_location)
             if self.looping:
                 self.play()
 
@@ -99,6 +106,7 @@ class GstPlayer:
             was_playing = True
             self.stop()
         self.player.set_property('uri', location)
+        self.current_location = location
         if was_playing:
             self.play()
 
@@ -230,7 +238,7 @@ class PlayerApp(object):
         
         # player
         self.player = GstPlayer(self.videowidget)
-        self.player.eos_callbacks.append(self.on_video_eos)
+        self.player.end_of_file_signal.append(self.on_video_eos)
         
         # delayed calls using gobject. Update the slider.
         self.update_id = -1
@@ -243,7 +251,7 @@ class PlayerApp(object):
         self.window.connect("window-state-event", self.on_window_state_event)
         self.window.connect('delete-event', self.on_delete_event)
 
-    def on_video_eos(self):
+    def on_video_eos(self, *args):
         """
         Called when the player calls its eos_callbacks
         """
@@ -359,7 +367,7 @@ class PlayerApp(object):
         gst.debug('value changed, perform seek to %r' % real)
         self.player.seek(real)
         # allow for a preroll
-        self.player.get_state(timeout=50*gst.MSECOND) # 50 ms
+        self.player.get_state(timeout=50 * gst.MSECOND) # 50 ms
 
     def scale_button_release_cb(self, widget, event):
         # see seek.cstop_seek
@@ -390,19 +398,33 @@ class VeeJay(object):
     """
     Chooses movie files to play.
     """
-    def __init__(self, player, dir_path=None):
+    def __init__(self, player, dir_path=None, times_play_each=2, verbose=False):
         self.player = player
+        self.player.end_of_file_signal.append(self.on_end_of_file_reached)
+        self.times_play_each = times_play_each
+        self.verbose = verbose
         if dir_path is None:
             self.dir_path = os.getcwd()
         else:
             self.dir_path = os.path.abspath(os.path.expanduser(dir_path))
         if not os.path.isdir(self.dir_path):
             raise RuntimeError("%s is not a directory." % (self.dir_path))
-        #self.looping_call = 
         self.previous_clip_path = None
-        #reactor.callLater(5, self.choose_next)
         self.clips = []
         self.delay_between_changes = 5 # seconds
+        self.current_location = None
+        self.num_played_current_location = 0
+
+    def on_end_of_file_reached(self, player, location):
+        """
+        Slot for player.end_of_file_signal 
+        """
+        # of course, current_location == location
+        if self.num_played_current_location == self.times_play_each:
+            self.choose_next()
+        else:
+            self.num_played_current_location += 1
+            player.play()
 
     def load_clip_list(self):
         """
@@ -410,7 +432,8 @@ class VeeJay(object):
         Raises an error if there are none.
         """
         self.clips = glob.glob(os.path.join(self.dir_path, "*.mov"))
-        print("Found clips %s" % (self.clips))
+        if self.verbose:
+            print("Found clips %s" % (self.clips))
         if len(self.clips) == 0:
             raise RuntimeError("No clips in directory %s" % (self.dir_path))
     
@@ -423,26 +446,27 @@ class VeeJay(object):
         prev = -1
         if self.previous_clip_path in self.clips:
             prev = self.clips.index(self.previous_clip_path)
-        print "prev:", prev
+        if self.verbose:
+            print "prev:", prev
         next = prev + 1
         if len(self.clips) == 0:
-            print("Not clip to play.")
+            print("Error: Not clip to play.")
         elif len(self.clips) == 1:
-            print("Only one clip to play.")
+            print("Warning: Only one clip to play.")
         else:
             if len(self.clips) == next:
                 next = 0
-            print "next:", next
             file_path = self.clips[next]
             self.previous_clip_path = file_path
-            print "choosing file", file_path
+            print "Playing next: (%s/%s) %s" % (next, len(self.clips), file_path)
             uri = "file://%s" % (file_path)
             if not gst.uri_is_valid(uri):
                 msg = "Error: Invalid URI: %s\n" % (uri)
                 raise RuntimeError(msg)
             else:
                 self.player.set_location(uri)
-        reactor.callLater(self.delay_between_changes, self.choose_next)
+                self.num_played_current_location = 1
+                self.current_location = uri
 
 # Need to register our derived widget types for implicit event
 # handlers to get called.
