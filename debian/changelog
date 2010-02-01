@@ -1,3 +1,9 @@
+toonplayer (0.1.2-0ubuntu1) hardy; urgency=low
+
+  * Changing clip every n times it's played, not every n seconds anymore.
+
+ -- Alexandre Quessy <alexandre@quessy.net>  Mon, 01 Feb 2010 08:17:21 -0500
+
 toonplayer (0.1.1-1ubuntu1) hardy; urgency=low
 
   * Small fixes in version numbers.

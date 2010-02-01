@@ -27,7 +27,7 @@
 """
 Main entry point of the application.
 """
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 import os
 import sys
