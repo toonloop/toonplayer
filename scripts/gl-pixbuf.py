@@ -315,8 +315,8 @@ class App(object):
         #print "bus,mess:", bus, message
         t = message.type
         if t == gst.MESSAGE_ELEMENT and message.structure.get_name() == 'pixbuf':
-            #pixbuf = message.structure['pixbuf']
-            pixbuf = self.pixbuffer.get_property('last-pixbuf')
+            pixbuf = message.structure['pixbuf']
+            #pixbuf = self.pixbuffer.get_property('last-pixbuf')
             #print "size:", pixbuf.get_width(), pixbuf.get_height()
             self._update_texture(pixbuf)
 
