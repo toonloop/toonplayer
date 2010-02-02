@@ -201,7 +201,7 @@ class GlDrawingArea(gtk.DrawingArea, gtk.gtkgl.Widget):
         glBindTexture(GL_TEXTURE_RECTANGLE_ARB, tex_id)
 
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
-        glTexImage2D(GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGB, w, h, 0,
+        glTexImage2D(GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGBA, w, h, 0,
                      GL_RGB, GL_UNSIGNED_BYTE, pixels)
         glTexParameterf(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
         glTexParameterf(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
@@ -313,22 +313,24 @@ class App(object):
         #print "bus,mess:", bus, message
         t = message.type
         if t == gst.MESSAGE_ELEMENT and message.structure.get_name() == 'pixbuf':
-            pixbuf = message.structure['pixbuf']
+            #pixbuf = message.structure['pixbuf']
+            pixbuf = self.pixbuffer.get_property('last-pixbuf')
             #print "size:", pixbuf.get_width(), pixbuf.get_height()
             self._update_texture(pixbuf)
 
     def _update_texture(self, image):
-        if self.drawing_area.texture_id is not None:
-            pixels = image.get_pixels()
-            w = image.get_width() # 320
-            h = image.get_height() # 240
-            glBindTexture(GL_TEXTURE_RECTANGLE_ARB, self.drawing_area.texture_id)
-
-            glTexImage2D(GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGB, w, h, 0,
-                GL_RGB, GL_UNSIGNED_BYTE, pixels)
-            glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
-            glTexParameterf(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
-            glTexParameterf(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
+        #if self.drawing_area.texture_id is not None:
+        #print("updating texture")
+        pixels = image.get_pixels()
+        w = image.get_width() # 320
+        h = image.get_height() # 240
+        glBindTexture(GL_TEXTURE_RECTANGLE_ARB, self.drawing_area.texture_id)
+        # 24 bits means it's RGBA. TODO: change the caps
+        glTexImage2D(GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGBA, w, h, 0,
+            GL_RGBA, GL_UNSIGNED_BYTE, pixels)
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
+        glTexParameterf(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+        glTexParameterf(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
  
     def on_delete_event(self, widget, event=None):
         """
