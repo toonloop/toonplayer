@@ -12,6 +12,7 @@ import gtk.gtkgl
 from OpenGL.GL import *
 from OpenGL.GLU import *
 import gst
+import struct
 
 WIDTH = 640
 HEIGHT = 480
@@ -192,7 +193,8 @@ class GlDrawingArea(gtk.DrawingArea, gtk.gtkgl.Widget):
         return False
     
     def _create_texture(self):
-        pixels = "\0" * 320 * 240
+        black_pixel = struct.pack(">i", 255)
+        pixels = black_pixel * 320 * 240 # 32 bits black
         w = 320
         h = 240
         
@@ -201,8 +203,8 @@ class GlDrawingArea(gtk.DrawingArea, gtk.gtkgl.Widget):
         glBindTexture(GL_TEXTURE_RECTANGLE_ARB, tex_id)
 
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
-        glTexImage2D(GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGBA, w, h, 0,
-                     GL_RGB, GL_UNSIGNED_BYTE, pixels)
+        glTexImage2D(GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGB, w, h, 0,
+                     GL_RGBA, GL_UNSIGNED_BYTE, pixels)
         glTexParameterf(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
         glTexParameterf(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
         self.texture_id = tex_id
@@ -321,12 +323,14 @@ class App(object):
     def _update_texture(self, image):
         #if self.drawing_area.texture_id is not None:
         #print("updating texture")
+        sys.stdout.write(".")
+        sys.stdout.flush()
         pixels = image.get_pixels()
         w = image.get_width() # 320
         h = image.get_height() # 240
         glBindTexture(GL_TEXTURE_RECTANGLE_ARB, self.drawing_area.texture_id)
         # 24 bits means it's RGBA. TODO: change the caps
-        glTexImage2D(GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGBA, w, h, 0,
+        glTexImage2D(GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGB, w, h, 0,
             GL_RGBA, GL_UNSIGNED_BYTE, pixels)
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
         glTexParameterf(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
