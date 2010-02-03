@@ -119,7 +119,6 @@ class GlDrawingArea(gtk.DrawingArea, gtk.gtkgl.Widget):
         glColor4f(1.0, 1.0, 1.0, 1.0) # default color is white
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
-
         # OpenGL end
         gldrawable.gl_end()
 
@@ -263,7 +262,7 @@ class Texture(object):
     def __init__(self):
         self.width = 320
         self.height = 240
-        self.image_mode = "RGBA"
+        self.image_mode = "RGB"
         
         black_pixel = struct.pack(">i", 255)
         self.image_data = black_pixel * self.width * self.height # 32 bits black
@@ -275,14 +274,15 @@ class Texture(object):
         glTexImage2D(GL_TEXTURE_RECTANGLE_ARB, 
             0, GL_RGB, 
             self.width, self.height, 
-            0, GL_RGBA, 
+            0, GL_RGB, 
             GL_UNSIGNED_BYTE, self.image_data)
         glTexParameterf(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
         glTexParameterf(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
 
-    def load_image_to_texture(self, fileName):
+    def load_image_to_texture(self, file_name):
         try:
-            image = Image.open(fileName)
+            print 'opening ', file_name
+            image = Image.open(file_name)
             self.width = image.size[0]
             self.height = image.size[1]
             self.image_mode = image.mode
@@ -290,6 +290,7 @@ class Texture(object):
         except Exception, e:
             print e
         else:
+            print 'binding texture %sx%s %s' % (self.width, self.height, self.image_mode)
             glBindTexture(GL_TEXTURE_RECTANGLE_ARB, self.texture_id)
             if self.image_mode == "RGB":
                 try:
@@ -415,9 +416,10 @@ class App(object):
             pixbuf = self.pixbuffer.get_property('last-pixbuf')
             print "grabbing size:", pixbuf.get_width(), pixbuf.get_height()
             # TODO:try/except GError
-            file_name = "snapshot_%d.jpg" % (self.incrementing_image_number)
+            file_name = os.path.join(DATA_PATH, "snapshot_%d.jpg" % (self.incrementing_image_number))
             pixbuf.save(file_name, "jpeg", {"quality":"100"})
             if self.drawing_area.pil_image_texture is not None:
+                print "loading the image"
                 self.drawing_area.pil_image_texture.load_image_to_texture(file_name)
             self.incrementing_image_number += 1
         if name == "Escape":
