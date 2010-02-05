@@ -5,8 +5,11 @@ Testing OpenGL in a GTK Window.
 This is quite long to startup, though.
 """
 import sys
-import pygtk
-pygtk.require('2.0')
+from twisted.internet import gtk2reactor
+gtk2reactor.install() # has to be done before importing reactor
+from twisted.internet import reactor
+#import pygtk
+#pygtk.require('2.0')
 import gtk
 import gtk.gtkgl
 from OpenGL.GL import *
@@ -46,6 +49,7 @@ class GlDrawingArea(gtk.DrawingArea, gtk.gtkgl.Widget):
     """
     def __init__(self, glconfig, app):
         gtk.DrawingArea.__init__(self)
+        self.increment = 0
         self._app = app # let's pass it 
         # Set OpenGL-capability to the drawing area
         self.set_gl_capability(glconfig)
@@ -79,6 +83,8 @@ class GlDrawingArea(gtk.DrawingArea, gtk.gtkgl.Widget):
 
         # OpenGL end
         gldrawable.gl_end()
+        
+        #gobject.timeout_add(0.1, self.draw)
 
     def _set_view(self, ratio):
         """
@@ -134,6 +140,10 @@ class GlDrawingArea(gtk.DrawingArea, gtk.gtkgl.Widget):
         """
         # Obtain a reference to the OpenGL drawable
         # and rendering context.
+        self._draw()
+        return False
+
+    def _draw(self):
         gldrawable = self.get_gl_drawable()
         glcontext = self.get_gl_context()
         if gldrawable is None:
@@ -153,16 +163,19 @@ class GlDrawingArea(gtk.DrawingArea, gtk.gtkgl.Widget):
             glFlush()
         # OpenGL end
         gldrawable.gl_end()
-        return False
+        reactor.callLater(0.1, self._draw)
 
     def draw(self):
         """
         Draws each frame.
         """
+        self.increment += 1
+        print 'increment:', self.increment
         # DRAW STUFF HERE
         glColor4f(1.0, 0.8, 0.2, 1.0)
         glPushMatrix()
         glScale(0.5, 0.5, 1.0)
+        glRotatef(self.increment / 36., 0, 0, 1)
         draw_square()
         glPopMatrix()
 
@@ -172,6 +185,7 @@ class GlDrawingArea(gtk.DrawingArea, gtk.gtkgl.Widget):
             x = (i / float(num)) * 4 - 2
             draw_line(float(x), -2.0, float(x), 2.0)
             draw_line(-2.0, float(x), 2.0, float(x))
+        print 'done drawing'
 
 class App(object):
     """
@@ -236,13 +250,13 @@ class App(object):
         """
         Closing the window quits.
         """
-        gtk.main_quit()
+        reactor.stop()
 
     def on_quit_clicked(self, widget, event=None):
         """
         The quit button quits.
         """
-        gtk.main_quit()
+        reactor.stop()
         
     def on_key_pressed(self, widget, event):
         """
@@ -304,4 +318,4 @@ class App(object):
 if __name__ == '__main__':
     print "screen is %sx%s" % (gtk.gdk.screen_width(), gtk.gdk.screen_height())
     app = App()
-    gtk.main()
+    reactor.run()
