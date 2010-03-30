@@ -1,3 +1,9 @@
+toonplayer (0.1.3-0ubuntu1) hardy; urgency=low
+
+  * Added fullscreen mode
+
+ -- Alexandre Quessy <alexandre@quessy.net>  Tue, 30 Mar 2010 02:45:34 -0400
+
 toonplayer (0.1.2-0ubuntu1) hardy; urgency=low
 
   * Changing clip every n times it's played, not every n seconds anymore.
