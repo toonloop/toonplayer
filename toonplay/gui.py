@@ -189,7 +189,7 @@ def create_empty_cursor():
 
 class PlayerApp(object):
     UPDATE_INTERVAL = 500
-    def __init__(self):
+    def __init__(self, fullscreen=False):
         self.is_fullscreen = False
         # window
         self.window = gtk.Window()
@@ -250,6 +250,9 @@ class PlayerApp(object):
         self.window.connect("key-press-event", self.on_key_pressed)
         self.window.connect("window-state-event", self.on_window_state_event)
         self.window.connect('delete-event', self.on_delete_event)
+        #fullscreen mode
+        if fullscreen:
+            reactor.callLater(0.5, self.toggle_fullscreen)
 
     def on_video_eos(self, *args):
         """

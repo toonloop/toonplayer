@@ -40,6 +40,7 @@ def run():
     parser.add_option("-n", "--times-each-played", type="int", help="How many times to play each clip.", default=2)
     parser.add_option("-d", "--clips-directory", type="string", help="Specifies the to directory to look in for clips to play. You can also simply specify the directory as the first argument. The default directory is %s if it exists, or the current working directory.")
     parser.add_option("-v", "--verbose", action="store_true", help="Enables verbose output.")
+    parser.add_option("-f", "--fullscreen", action="store_true", help="Enables a fullscreen view.")
     (options, args) = parser.parse_args()
     dir_path = None
     if options.clips_directory:
@@ -52,7 +53,7 @@ def run():
             dir_path = check_dir
     
     from toonplay import gui
-    app = gui.PlayerApp()
+    app = gui.PlayerApp(fullscreen=options.fullscreen)
     vj = gui.VeeJay(app.player, dir_path=dir_path, times_play_each=options.times_each_played, verbose=options.verbose)
     try:
         vj.load_clip_list()
