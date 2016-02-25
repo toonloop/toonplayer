@@ -10,6 +10,6 @@ setup(
     author="Alexandre Quessy",
     author_email="alexandre@quessy.net",
     url="http://www.toonloop.com",
-    packages=["toonplay"],
-    scripts=["toonplayer"]
+    packages=["toonplayer"],
+    scripts=["scripts/toonplayer"]
     )

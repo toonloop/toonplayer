@@ -1,0 +1,6 @@
+*.pyc
+*mov
+build/*
+.*.swp
+*.1
+html/*
