@@ -1,0 +1,9 @@
+Installation instructions for Toonplayer
+========================================
+
+Ubuntu 14.04
+------------
+Install dependencies::
+
+  sudo apt-get install python-twisted python-gtk2 python-gst0.10 python-setuptools help2man
+
