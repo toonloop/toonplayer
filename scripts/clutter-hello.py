@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+"""
+Needs python-clutter.
+"""
 
 if __name__ == "__main__":
     from twisted.internet import gtk2reactor
