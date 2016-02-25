@@ -1,0 +1,16 @@
+Toonplayer release notes
+========================
+
+2016-02-25 toonplayer 0.2.0
+---------------------------
+* add fullscreen mode
+* rename python package
+
+
+2010-02-01 toonplayer 0.1.2
+---------------------------
+
+
+2010-01-27 toonplayer 0.1.1
+---------------------------
+Aparently, this is the initial release.
