@@ -53,7 +53,7 @@ class GstPlayer:
         self.current_location = None
 
     def on_sync_message(self, bus, message):
-        print "on_sync_message", bus, message
+        print("on_sync_message %s %s" % (bus, message))
         if message.structure is None:
             return
         if message.structure.get_name() == 'prepare-xwindow-id':
@@ -68,7 +68,7 @@ class GstPlayer:
         t = message.type
         if t == gst.MESSAGE_ERROR:
             err, debug = message.parse_error()
-            print "Error: %s" % err, debug
+            print("Error: %s %s" % (err, debug))
             #call_callbacks(self.eos_callbacks)
             call_callbacks(self.end_of_file_signal, self, self.current_location)
             self.playing = False
@@ -241,7 +241,7 @@ class PlayerApp(object):
         self.play_toggled()
 
     def load_file(self, location):
-        print "loading %s" % (location)
+        print("loading %s" % (location))
         self.player.set_location(location)
 
     def on_delete_event(self, *args):
@@ -430,7 +430,7 @@ class VeeJay(object):
         if self.previous_clip_path in self.clips:
             prev = self.clips.index(self.previous_clip_path)
         if self.verbose:
-            print "prev:", prev
+            print("prev: %s" % (prev))
         next = prev + 1
         if len(self.clips) == 0:
             print("Error: Not clip to play.")

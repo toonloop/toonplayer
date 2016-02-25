@@ -9,7 +9,6 @@ from twisted.internet import gtk2reactor
 gtk2reactor.install() # has to be done before importing reactor and gtk
 from twisted.internet import reactor
 import gobject
-from toonplayer import gui
 from toonplayer import __version__
 
 
@@ -39,6 +38,8 @@ def run():
         if os.path.exists(check_dir) and os.path.isdir(check_dir):
             dir_path = check_dir
     
+    # import gstreamer after you optparse code, so that --help prints ours
+    from toonplayer import gui
     app = gui.PlayerApp(fullscreen=options.fullscreen)
     vj = gui.VeeJay(app.player, dir_path=dir_path,
             times_play_each=options.times_each_played,

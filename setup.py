@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from distutils.core import setup
+from toonplayer import __version__
 
-__version__ = "0.1.9"
 
 setup(
     name="toonplayer",
