@@ -1,0 +1,17 @@
+art1: 10.9.1.165 (et non 160)
+art2: 10.9.1.159
+art3: 10.9.1.163
+
+
+
+sudo apt-get install -y git terminator vim screen lunch
+mkdir src
+cd src
+git clone https://github.com/aalex/aalex-utils.git
+git clone https://github.com/aalex/toonloop.git
+git clone https://github.com/toonloop/toonplayer.git
+sudo apt-get install python-twisted python-gtk2 python-gst0.10 python-setuptools help2man
+
+sudo apt-get install -y automake bison build-essential flex libtool autotools-dev bison flex help2man libasound2-dev libavc1394-dev librtaudio-dev libboost-date-time-dev libboost-filesystem-dev libboost-program-options-dev libboost-signals-dev libboost-system-dev libboost-thread-dev libclutter-1.0-dev libclutter-gst-dev libglew-dev libglib2.0-dev libglu-dev libgstreamer-plugins-base0.10-dev libgstreamer0.10-dev libjack-dev liblo-dev libraw1394-dev libstk0-dev libxml2-dev libxv-dev gstreamer0.10-plugins-bad gstreamer0.10-plugins-base gstreamer0.10-plugins-good gstreamer0.10-plugins-ugly gstreamer0.10-x mencoder gstreamer0.10-tools gstreamer0.10-ffmpeg
+
+
